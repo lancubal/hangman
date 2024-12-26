@@ -12,10 +12,6 @@ class Hangman
     display_game_state
   end
 
-  def secret_word
-    @secret_word
-  end
-
   def guess(letter)
     letter.downcase!
     if @secret_word.include?(letter)
@@ -33,6 +29,39 @@ class Hangman
     puts "Word: #{display_word}"
     puts "Incorrect guesses: #{@incorrect_guesses.join(', ')}"
     puts "Remaining incorrect guesses: #{@remaining_incorrect_guesses}"
+    draw_stickman
+  end
+
+  def draw_stickman
+    parts = [
+      " O ", # head
+      " | ", # body
+      "/| ", # one arm
+      "/|\\", # both arms
+      "/  ", # one leg
+      "/ \\" # both legs
+    ]
+
+    stickman = [
+      " +---+",
+      " |   |",
+      "     |",
+      "     |",
+      "     |",
+      "     |",
+      "======"
+    ]
+
+    parts_to_draw = parts[0, MAX_INCORRECT_GUESSES - @remaining_incorrect_guesses]
+
+    stickman[2] = " #{parts_to_draw[0]}" if parts_to_draw[0]
+    stickman[3] = " #{parts_to_draw[1]}" if parts_to_draw[1]
+    stickman[3] = "#{parts_to_draw[2]}" if parts_to_draw[2]
+    stickman[3] = "#{parts_to_draw[3]}" if parts_to_draw[3]
+    stickman[4] = " #{parts_to_draw[4]}" if parts_to_draw[4]
+    stickman[4] = "#{parts_to_draw[5]}" if parts_to_draw[5]
+
+    stickman.each { |line| puts line }
   end
 
   def save_game(filename)
