@@ -1,12 +1,14 @@
 class Hangman
   DICTIONARY_PATH = 'google-10000-english-no-swears.txt'
   MAX_INCORRECT_GUESSES = 6
+  SAVE_DIR = 'saves'
 
   def initialize
     @secret_word = select_secret_word
     @incorrect_guesses = []
     @correct_guesses = []
     @remaining_incorrect_guesses = MAX_INCORRECT_GUESSES
+    @save_file = nil
     display_game_state
   end
 
@@ -33,6 +35,24 @@ class Hangman
     puts "Remaining incorrect guesses: #{@remaining_incorrect_guesses}"
   end
 
+  def save_game(filename)
+    Dir.mkdir(SAVE_DIR) unless Dir.exist?(SAVE_DIR)
+    File.open("#{SAVE_DIR}/#{filename}", 'wb') { |file| Marshal.dump(self, file) }
+    @save_file = filename
+    puts "Game saved as #{filename}!"
+  end
+
+  def self.load_game(filename)
+    if File.exist?("#{SAVE_DIR}/#{filename}")
+      game = File.open("#{SAVE_DIR}/#{filename}", 'rb') { |file| Marshal.load(file) }
+      game.instance_variable_set(:@save_file, filename)
+      game
+    else
+      puts "No saved game found with the name #{filename}."
+      new
+    end
+  end
+
   private
 
   def load_dictionary
@@ -47,17 +67,62 @@ class Hangman
   def check_game_over
     if @remaining_incorrect_guesses <= 0
       puts "Game over! The word was: #{@secret_word}"
+      delete_save_file
       exit
     elsif @secret_word.chars.all? { |char| @correct_guesses.include?(char) }
       puts "Congratulations! You've guessed the word: #{@secret_word}"
+      delete_save_file
       exit
+    end
+  end
+
+  def delete_save_file
+    return unless @save_file
+
+    if File.exist?("#{SAVE_DIR}/#{@save_file}")
+      File.delete("#{SAVE_DIR}/#{@save_file}")
+      puts "Save file #{@save_file} deleted."
+    else
+      puts "No save file found with the name #{@save_file}."
     end
   end
 end
 
-game = Hangman.new
+puts "Welcome to Hangman!"
+puts "1. Start a new game"
+puts "2. Load a saved game"
+choice = gets.chomp
+
+if choice == '2'
+  if Dir.exist?(Hangman::SAVE_DIR)
+    save_files = Dir.entries(Hangman::SAVE_DIR).select { |f| !File.directory? f }
+    if save_files.empty?
+      puts "No saved games available."
+      game = Hangman.new
+    else
+      puts "Available saved games:"
+      save_files.each_with_index { |file, index| puts "#{index + 1}. #{file}" }
+      puts "Enter the number of the save file to load:"
+      file_choice = gets.chomp.to_i
+      filename = save_files[file_choice - 1]
+      game = Hangman.load_game(filename)
+    end
+  else
+    puts "No saved games available."
+    game = Hangman.new
+  end
+else
+  game = Hangman.new
+end
+
 loop do
-  puts "Enter a letter to guess:"
-  letter = gets.chomp
-  game.guess(letter)
+  puts "Enter a letter to guess or type 'save' to save the game:"
+  input = gets.chomp
+  if input.downcase == 'save'
+    puts "Enter a name for your save file:"
+    filename = gets.chomp
+    game.save_game(filename)
+  else
+    game.guess(input)
+  end
 end
